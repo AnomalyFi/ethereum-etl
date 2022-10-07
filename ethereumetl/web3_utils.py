@@ -19,12 +19,22 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from typing import Callable, List
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
+from web3.eth import Eth
+from web3._utils.rpc_abi import RPC
+from web3.method import Method, default_root_munger
+from web3.types import BlockIdentifier, ParityBlockTrace, RPCEndpoint
+
+get_block_receipts: Method[Callable[[BlockIdentifier], List[dict]]] = Method(
+    RPCEndpoint("eth_getBlockReceipts"),
+    mungers=[default_root_munger],
+)
+Eth.get_block_receipts = get_block_receipts
 
 
 def build_web3(provider):
-    w3 = Web3(provider)
+    w3 = Web3(provider, modules={"eth": (Eth,)})
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
     return w3
