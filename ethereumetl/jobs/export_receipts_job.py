@@ -28,7 +28,7 @@ from ethereumetl.executors.batch_work_executor import BatchWorkExecutor
 from ethereumetl.json_rpc_requests import generate_get_block_receipts_json_rpc
 from ethereumetl.mappers.receipt_log_mapper import EthReceiptLogMapper
 from ethereumetl.mappers.receipt_mapper import EthReceiptMapper
-from ethereumetl.utils import rpc_response_batch_to_results
+from ethereumetl.utils import rpc_response_batch_to_results, rpc_response_to_result
 from ethereumetl.utils import validate_range
 from ethereumetl.web3_utils import build_web3
 from web3 import Web3
@@ -79,8 +79,11 @@ class ExportReceiptsJob(BaseJob):
         receipts_rpc = list(generate_get_block_receipts_json_rpc(block_number_batch))
         response = self.batch_web3_provider.make_batch_request(json.dumps(receipts_rpc))
         results = rpc_response_batch_to_results(response)
-        receipts = [self.receipt_mapper.json_dict_to_receipt(result) for result in results]
-        for receipt in receipts:
+        for res in results:
+            result = rpc_response_to_result(res)
+
+            receipt = self.receipt_mapper.json_dict_to_receipt(result) 
+            #for receipt in receipts:
             self._export_receipt(receipt)
 
     def _export_receipt(self, receipt):
