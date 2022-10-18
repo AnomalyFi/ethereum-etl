@@ -25,7 +25,7 @@ import json
 
 from blockchainetl.jobs.base_job import BaseJob
 from ethereumetl.executors.batch_work_executor import BatchWorkExecutor
-from ethereumetl.json_rpc_requests import generate_get_receipt_json_rpc
+from ethereumetl.json_rpc_requests import generate_get_block_receipts_json_rpc
 from ethereumetl.mappers.receipt_log_mapper import EthReceiptLogMapper
 from ethereumetl.mappers.receipt_mapper import EthReceiptMapper
 from ethereumetl.utils import rpc_response_batch_to_results
@@ -71,43 +71,51 @@ class ExportReceiptsJob(BaseJob):
         #self.batch_work_executor.execute(self.transaction_hashes_iterable, self._export_receipt)
         self.batch_work_executor.execute(
             range(self.start_block, self.end_block + 1),
-            self._export_receipt,
+            self._export_receipts,
             total_items=self.end_block - self.start_block + 1
         )
 
-    # def _export_receipts(self, transaction_hashes):
-    #     receipts_rpc = list(generate_get_receipt_json_rpc(transaction_hashes))
-    #     response = self.batch_web3_provider.make_batch_request(json.dumps(receipts_rpc))
-    #     results = rpc_response_batch_to_results(response)
-    #     receipts = [self.receipt_mapper.json_dict_to_receipt(result) for result in results]
-    #     for receipt in receipts:
-    #         self._export_receipt(receipt)
+    def _export_receipts(self, block_number_batch):
+        receipts_rpc = list(generate_get_block_receipts_json_rpc(block_number_batch))
+        response = self.batch_web3_provider.make_batch_request(json.dumps(receipts_rpc))
+        results = rpc_response_batch_to_results(response)
+        receipts = [self.receipt_mapper.json_dict_to_receipt(result) for result in results]
+        for receipt in receipts:
+            self._export_receipt(receipt)
 
-    def _export_receipt(self, block_number_batch):
-        assert len(block_number_batch) == 1
-        block_number = block_number_batch[0]
-
-        all_receipts = []
-
-        # TODO: Change to traceFilter when this issue is fixed
-        # https://github.com/paritytech/parity-ethereum/issues/9822
-        block_hex = Web3.toHex(block_number)
-        w3 = build_web3(self.batch_web3_provider)
-        json_reciepts = w3.eth.get_block_receipts(block_hex)  # type: ignore
-
-        if json_reciepts is None:
-            raise ValueError('Response from the node is None. Is the node fully synced? Is the node started with receipts enabled? Is get_block_recipts API enabled?')
-
-        receipts = [self.receipt_mapper.json_dict_to_receipt(json_receipt) for json_receipt in json_reciepts]
-        all_receipts.extend(receipts)
-            
+    def _export_receipt(self, receipt):
         if self.export_receipts:
-            for x in receipts:
-                self.item_exporter.export_item(self.receipt_mapper.receipt_to_dict(x))
+            #for x in receipts:
+            self.item_exporter.export_item(self.receipt_mapper.receipt_to_dict(receipt))
         if self.export_logs:
-            for receipt in receipts: 
-                for log in receipt.logs:
-                    self.item_exporter.export_item(self.receipt_log_mapper.receipt_log_to_dict(log))
+            for log in receipt.logs:
+                self.item_exporter.export_item(self.receipt_log_mapper.receipt_log_to_dict(log))
+
+    # def _export_receipt(self, block_number_batch):
+    #     assert len(block_number_batch) == 1
+    #     block_number = block_number_batch[0]
+
+    #     all_receipts = []
+
+    #     # TODO: Change to traceFilter when this issue is fixed
+    #     # https://github.com/paritytech/parity-ethereum/issues/9822
+    #     block_hex = Web3.toHex(block_number)
+    #     w3 = build_web3(self.batch_web3_provider)
+    #     json_reciepts = w3.eth.get_block_receipts(block_hex)  # type: ignore
+
+    #     if json_reciepts is None:
+    #         raise ValueError('Response from the node is None. Is the node fully synced? Is the node started with receipts enabled? Is get_block_recipts API enabled?')
+
+    #     receipts = [self.receipt_mapper.json_dict_to_receipt(json_receipt) for json_receipt in json_reciepts]
+    #     all_receipts.extend(receipts)
+            
+    #     if self.export_receipts:
+    #         for x in receipts:
+    #             self.item_exporter.export_item(self.receipt_mapper.receipt_to_dict(x))
+    #     if self.export_logs:
+    #         for receipt in receipts: 
+    #             for log in receipt.logs:
+    #                 self.item_exporter.export_item(self.receipt_log_mapper.receipt_log_to_dict(log))
 
     
         
