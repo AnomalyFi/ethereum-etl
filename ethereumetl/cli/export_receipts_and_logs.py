@@ -35,9 +35,9 @@ logging_basic_config()
 
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@click.option('-s', '--start-block', default=0, show_default=True, type=int, help='Start block')
+@click.option('-e', '--end-block', required=True, type=int, help='End block')
 @click.option('-b', '--batch-size', default=100, show_default=True, type=int, help='The number of receipts to export at a time.')
-@click.option('-t', '--transaction-hashes', required=True, type=str,
-              help='The file containing transaction hashes, one per line.')
 @click.option('-p', '--provider-uri', default='https://mainnet.infura.io', show_default=True, type=str,
               help='The URI of the web3 provider e.g. '
                    'file://$HOME/Library/Ethereum/geth.ipc or https://mainnet.infura.io')
@@ -48,13 +48,15 @@ logging_basic_config()
               help='The output file for receipt logs. '
                    'If not provided receipt logs will not be exported. Use "-" for stdout')
 @click.option('-c', '--chain', default='ethereum', show_default=True, type=str, help='The chain network to connect to.')
-def export_receipts_and_logs(batch_size, transaction_hashes, provider_uri, max_workers, receipts_output, logs_output,
+def export_receipts_and_logs(start_block, end_block, batch_size, transaction_hashes, provider_uri, max_workers, receipts_output, logs_output,
                              chain='ethereum'):
     """Exports receipts and logs."""
     provider_uri = check_classic_provider_uri(chain, provider_uri)
     with smart_open(transaction_hashes, 'r') as transaction_hashes_file:
         job = ExportReceiptsJob(
-            transaction_hashes_iterable=(transaction_hash.strip() for transaction_hash in transaction_hashes_file),
+            start_block=start_block,
+            end_block=end_block,
+            # transaction_hashes_iterable=(transaction_hash.strip() for transaction_hash in transaction_hashes_file),
             batch_size=batch_size,
             batch_web3_provider=ThreadLocalProxy(lambda: get_provider_from_uri(provider_uri, batch=True)),
             max_workers=max_workers,
