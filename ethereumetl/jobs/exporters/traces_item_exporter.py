@@ -42,6 +42,7 @@ FIELDS_TO_EXPORT = [
     'error',
     'status',
     'trace_id',
+    'chain_id'
 ]
 
 

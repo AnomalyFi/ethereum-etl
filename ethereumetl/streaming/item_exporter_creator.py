@@ -23,15 +23,39 @@
 from blockchainetl.jobs.exporters.console_item_exporter import ConsoleItemExporter
 from blockchainetl.jobs.exporters.multi_item_exporter import MultiItemExporter
 
+CHAIN_ID_TOPIC_PREFIX_MAPPING = {
+    1: 'ethereum',
+    4: 'ethereum_rinkeby',
+    5: 'ethereum_goerli',
+    137: 'polygon',
+    80001: 'polygon_mumbai',
+}
 
-def create_item_exporters(outputs):
+def get_kafka_topic_mapping(chain_id):
+    if chain_id not in CHAIN_ID_TOPIC_PREFIX_MAPPING:
+        raise ValueError('Unable to determine topic mapping for chain_id ' + chain_id)
+    topic_prefix = CHAIN_ID_TOPIC_PREFIX_MAPPING[chain_id]
+    return {
+        'block': topic_prefix + '_blocks',
+        'transaction': topic_prefix + '_transactions',
+        'log': topic_prefix + '_logs',
+        'token_transfer': topic_prefix + '_token_transfers',
+        # todo(shashank): migrate mainnet consumers to new topic
+        'token_transfer_v2': topic_prefix + '_token_transfers_v2',
+        'trace': topic_prefix + '_traces',
+        'contract': topic_prefix + '_contracts',
+        'token': topic_prefix + '_tokens',
+    }
+
+
+def create_item_exporters(outputs, testnet=False, chain_id=1):
     split_outputs = [output.strip() for output in outputs.split(',')] if outputs else ['console']
 
-    item_exporters = [create_item_exporter(output) for output in split_outputs]
+    item_exporters = [create_item_exporter(output, testnet, chain_id) for output in split_outputs]
     return MultiItemExporter(item_exporters)
 
 
-def create_item_exporter(output):
+def create_item_exporter(output, testnet=False, chain_id=1):
     item_exporter_type = determine_item_exporter_type(output)
     if item_exporter_type == ItemExporterType.PUBSUB:
         from blockchainetl.jobs.exporters.google_pubsub_item_exporter import GooglePubSubItemExporter
@@ -57,6 +81,7 @@ def create_item_exporter(output):
         from blockchainetl.jobs.exporters.converters.unix_timestamp_item_converter import UnixTimestampItemConverter
         from blockchainetl.jobs.exporters.converters.int_to_decimal_item_converter import IntToDecimalItemConverter
         from blockchainetl.jobs.exporters.converters.list_field_item_converter import ListFieldItemConverter
+        from blockchainetl.jobs.exporters.converters.chain_id_converter import ChainIdConverter
         from ethereumetl.streaming.postgres_tables import BLOCKS, TRANSACTIONS, LOGS, TOKEN_TRANSFERS, TRACES, TOKENS, CONTRACTS
 
         item_exporter = PostgresItemExporter(
@@ -70,24 +95,18 @@ def create_item_exporter(output):
                 'contract': create_insert_statement_for_table(CONTRACTS),
             },
             converters=[UnixTimestampItemConverter(), IntToDecimalItemConverter(),
-                        ListFieldItemConverter('topics', 'topic', fill=4)])
+                       ListFieldItemConverter('topics', 'topic', fill=4), ChainIdConverter(chain_id)])
     elif item_exporter_type == ItemExporterType.GCS:
         from blockchainetl.jobs.exporters.gcs_item_exporter import GcsItemExporter
         bucket, path = get_bucket_and_path_from_gcs_output(output)
         item_exporter = GcsItemExporter(bucket=bucket, path=path)
     elif item_exporter_type == ItemExporterType.CONSOLE:
-        item_exporter = ConsoleItemExporter()
+        from blockchainetl.jobs.exporters.converters.chain_id_converter import ChainIdConverter
+        item_exporter = ConsoleItemExporter([ChainIdConverter(chain_id)])
     elif item_exporter_type == ItemExporterType.KAFKA:
         from blockchainetl.jobs.exporters.kafka_exporter import KafkaItemExporter
-        item_exporter = KafkaItemExporter(output, item_type_to_topic_mapping={
-            'block': 'blocks',
-            'transaction': 'transactions',
-            'log': 'logs',
-            'token_transfer': 'token_transfers',
-            'trace': 'traces',
-            'contract': 'contracts',
-            'token': 'tokens',
-        })
+        from blockchainetl.jobs.exporters.converters.chain_id_converter import ChainIdConverter
+        item_exporter = KafkaItemExporter(output, item_type_to_topic_mapping=get_kafka_topic_mapping(chain_id), converters=[ChainIdConverter(chain_id)]) 
 
     else:
         raise ValueError('Unable to determine item exporter type for output ' + output)

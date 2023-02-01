@@ -34,3 +34,4 @@ class EthReceipt(object):
         self.root = None
         self.status = None
         self.effective_gas_price = None
+        self.chain_id = 1

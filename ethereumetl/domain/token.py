@@ -29,3 +29,4 @@ class EthToken(object):
         self.decimals = None
         self.total_supply = None
         self.block_number = None
+        self.chain_id = 1

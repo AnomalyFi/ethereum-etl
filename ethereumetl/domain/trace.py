@@ -42,3 +42,4 @@ class EthTrace(object):
         self.status = None
         self.trace_id = None
         self.trace_index = None
+        self.chain_id = 1

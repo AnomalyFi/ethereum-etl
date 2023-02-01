@@ -22,14 +22,19 @@
 
 import json
 
+from blockchainetl.jobs.exporters.converters.composite_item_converter import CompositeItemConverter
 
 class ConsoleItemExporter:
+    def __init__(self, converters=()):
+        self.converter = CompositeItemConverter(converters)
+
     def open(self):
         pass
 
     def export_items(self, items):
         for item in items:
-            self.export_item(item)
+            converted_item = self.converter.convert_item(item)
+            self.export_item(converted_item)
 
     def export_item(self, item):
         print(json.dumps(item))

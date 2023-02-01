@@ -33,7 +33,8 @@ RECEIPT_FIELDS_TO_EXPORT = [
     'contract_address',
     'root',
     'status',
-    'effective_gas_price'
+    'effective_gas_price',
+    'chain_id'
 ]
 
 LOG_FIELDS_TO_EXPORT = [
@@ -44,7 +45,8 @@ LOG_FIELDS_TO_EXPORT = [
     'block_number',
     'address',
     'data',
-    'topics'
+    'topics',
+    'chain_id'
 ]
 
 

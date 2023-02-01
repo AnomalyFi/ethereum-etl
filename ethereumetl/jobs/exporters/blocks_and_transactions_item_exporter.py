@@ -42,7 +42,8 @@ BLOCK_FIELDS_TO_EXPORT = [
     'gas_used',
     'timestamp',
     'transaction_count',
-    'base_fee_per_gas'
+    'base_fee_per_gas',
+    'chain_id'
 ]
 
 TRANSACTION_FIELDS_TO_EXPORT = [
@@ -60,7 +61,8 @@ TRANSACTION_FIELDS_TO_EXPORT = [
     'block_timestamp',
     'max_fee_per_gas',
     'max_priority_fee_per_gas',
-    'transaction_type'
+    'transaction_type',
+    'chain_id'
 ]
 
 

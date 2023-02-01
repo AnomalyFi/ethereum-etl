@@ -25,6 +25,7 @@ import random
 import click
 from blockchainetl.streaming.streaming_utils import configure_signals, configure_logging
 from ethereumetl.enumeration.entity_type import EntityType
+from ethereumetl.web3_utils import build_web3
 
 from ethereumetl.providers.auto import get_provider_from_uri
 from ethereumetl.streaming.item_exporter_creator import create_item_exporters
@@ -53,7 +54,7 @@ from ethereumetl.thread_local_proxy import ThreadLocalProxy
 @click.option('--log-file', default=None, show_default=True, type=str, help='Log file')
 @click.option('--pid-file', default=None, show_default=True, type=str, help='pid file')
 def stream(last_synced_block_file, lag, provider_uri, output, start_block, entity_types,
-           period_seconds=10, batch_size=2, block_batch_size=10, max_workers=5, log_file=None, pid_file=None):
+           period_seconds=10, batch_size=2, block_batch_size=10, max_workers=5, log_file=None, pid_file=None, testnet=False):
     """Streams all data types to console or Google Pub/Sub."""
     configure_logging(log_file)
     configure_signals()
@@ -64,7 +65,10 @@ def stream(last_synced_block_file, lag, provider_uri, output, start_block, entit
 
     # TODO: Implement fallback mechanism for provider uris instead of picking randomly
     provider_uri = pick_random_provider_uri(provider_uri)
-    logging.info('Using ' + provider_uri)
+    logging.info('Using provider: ' + provider_uri)
+
+    chain_id = get_chain_id(provider_uri)
+    logging.info('Using chain_id: ' + str(chain_id))
 
     streamer_adapter = EthStreamerAdapter(
         batch_web3_provider=ThreadLocalProxy(lambda: get_provider_from_uri(provider_uri, batch=True)),
@@ -101,3 +105,8 @@ def parse_entity_types(entity_types):
 def pick_random_provider_uri(provider_uri):
     provider_uris = [uri.strip() for uri in provider_uri.split(',')]
     return random.choice(provider_uris)
+
+def get_chain_id(provider_uri):
+    provider = get_provider_from_uri(provider_uri)
+    web3 = build_web3(provider)
+    return int(web3.eth.chain_id)
