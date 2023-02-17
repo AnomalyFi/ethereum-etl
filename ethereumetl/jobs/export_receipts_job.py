@@ -86,7 +86,7 @@ class ExportReceiptsJob(BaseJob):
         #for res in results:
             #result = rpc_response_to_result(res)
 
-        receipts = [self.receipt_mapper.json_dict_to_receipt(json_receipt) for json_receipt in result]
+        receipts = [self.receipt_mapper.json_dict_to_receipt(json_receipt) for json_receipt in result["receipts"]]
         for receipt in receipts:
             self._export_receipt(receipt)
 
