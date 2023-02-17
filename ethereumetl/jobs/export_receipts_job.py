@@ -82,13 +82,13 @@ class ExportReceiptsJob(BaseJob):
         #receipts_rpc = list(generate_get_block_receipts_json_rpc(block_number_batch))
         receipts_rpc = generate_get_alchemy_transaction_receipts_json_rpc(block_number)
         response = self.batch_web3_provider.make_batch_request(json.dumps(receipts_rpc))
-        results = rpc_response_batch_to_results(response)
-        for res in results:
+        result = rpc_response_to_result(response)
+        #for res in results:
             #result = rpc_response_to_result(res)
 
-            receipts = [self.receipt_mapper.json_dict_to_receipt(json_receipt) for json_receipt in res]
-            for receipt in receipts:
-                self._export_receipt(receipt)
+        receipts = [self.receipt_mapper.json_dict_to_receipt(json_receipt) for json_receipt in result]
+        for receipt in receipts:
+            self._export_receipt(receipt)
 
     def _export_receipt(self, receipt):
         if self.export_receipts:
