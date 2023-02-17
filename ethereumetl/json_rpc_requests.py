@@ -52,7 +52,7 @@ def generate_get_block_receipts_json_rpc(block_numbers):
 def generate_get_alchemy_transaction_receipts_json_rpc(block_number):
     return generate_json_rpc(
         method='alchemy_getTransactionReceipts',
-        params=[hex(block_number)],
+        params= [{"blockNumber": hex(block_number)}],
         # save block_number in request ID, so later we can identify block number in response
         request_id=block_number,
     )
