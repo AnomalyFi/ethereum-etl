@@ -25,7 +25,7 @@ import json
 
 from blockchainetl.jobs.base_job import BaseJob
 from ethereumetl.executors.batch_work_executor import BatchWorkExecutor
-from ethereumetl.json_rpc_requests import generate_get_block_receipts_json_rpc
+from ethereumetl.json_rpc_requests import generate_get_block_receipts_json_rpc, generate_get_alchemy_transaction_receipts_json_rpc
 from ethereumetl.mappers.receipt_log_mapper import EthReceiptLogMapper
 from ethereumetl.mappers.receipt_mapper import EthReceiptMapper
 from ethereumetl.utils import rpc_response_batch_to_results, rpc_response_to_result
@@ -52,8 +52,8 @@ class ExportReceiptsJob(BaseJob):
         self.end_block = end_block
         self.batch_web3_provider = batch_web3_provider
         #self.transaction_hashes_iterable = transaction_hashes_iterable
-
-        self.batch_work_executor = BatchWorkExecutor(batch_size, max_workers)
+        # TODO: use batch_size for non alchemy requests
+        self.batch_work_executor = BatchWorkExecutor(1, max_workers)
         self.item_exporter = item_exporter
 
         self.export_receipts = export_receipts
@@ -76,7 +76,11 @@ class ExportReceiptsJob(BaseJob):
         )
 
     def _export_receipts(self, block_number_batch):
-        receipts_rpc = list(generate_get_block_receipts_json_rpc(block_number_batch))
+        assert len(block_number_batch) == 1
+        block_number = block_number_batch[0]
+
+        #receipts_rpc = list(generate_get_block_receipts_json_rpc(block_number_batch))
+        receipts_rpc = generate_get_alchemy_transaction_receipts_json_rpc(block_number)
         response = self.batch_web3_provider.make_batch_request(json.dumps(receipts_rpc))
         results = rpc_response_batch_to_results(response)
         for res in results:

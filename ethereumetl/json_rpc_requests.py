@@ -49,6 +49,14 @@ def generate_get_block_receipts_json_rpc(block_numbers):
             request_id=block_number,
         )
 
+def generate_get_alchemy_transaction_receipts_json_rpc(block_number):
+    return generate_json_rpc(
+        method='alchemy_getTransactionReceipts',
+        params=[hex(block_number)],
+        # save block_number in request ID, so later we can identify block number in response
+        request_id=block_number,
+    )
+
 
 def generate_get_receipt_json_rpc(transaction_hashes):
     for idx, transaction_hash in enumerate(transaction_hashes):
