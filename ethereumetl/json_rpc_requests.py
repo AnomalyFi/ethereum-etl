@@ -52,7 +52,7 @@ def generate_get_block_receipts_json_rpc(block_numbers):
 def generate_get_block_traces_json_rpc(block_numbers):
     for block_number in block_numbers:
         yield generate_json_rpc(
-            method='trace_block ',
+            method='trace_block',
             params=[hex(block_number)],
             # save block_number in request ID, so later we can identify block number in response
             request_id=block_number,
