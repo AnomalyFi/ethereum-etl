@@ -20,15 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
+
+
 from ethereumetl.executors.batch_work_executor import BatchWorkExecutor
 from blockchainetl.jobs.base_job import BaseJob
+from ethereumetl.json_rpc_requests import generate_get_block_traces_json_rpc
 from ethereumetl.mainnet_daofork_state_changes import DAOFORK_BLOCK_NUMBER
 from ethereumetl.mappers.trace_mapper import EthTraceMapper
 from ethereumetl.service.eth_special_trace_service import EthSpecialTraceService
 
 from ethereumetl.service.trace_id_calculator import calculate_trace_ids
 from ethereumetl.service.trace_status_calculator import calculate_trace_statuses
-from ethereumetl.utils import validate_range
+from ethereumetl.utils import validate_range, rpc_response_to_result
 
 
 class ExportTracesJob(BaseJob):
@@ -37,7 +41,7 @@ class ExportTracesJob(BaseJob):
             start_block,
             end_block,
             batch_size,
-            web3,
+            batch_web3_provider,
             item_exporter,
             max_workers,
             include_genesis_traces=False,
@@ -46,7 +50,8 @@ class ExportTracesJob(BaseJob):
         self.start_block = start_block
         self.end_block = end_block
 
-        self.web3 = web3
+        self.batch_web3_provider = batch_web3_provider
+        #self.web3 = web3
 
         # TODO: use batch_size when this issue is fixed https://github.com/paritytech/parity-ethereum/issues/9822
         self.batch_work_executor = BatchWorkExecutor(1, max_workers)
@@ -86,12 +91,16 @@ class ExportTracesJob(BaseJob):
 
         # TODO: Change to traceFilter when this issue is fixed
         # https://github.com/paritytech/parity-ethereum/issues/9822
-        json_traces = self.web3.parity.traceBlock(block_number)
+        #json_traces = self.web3.parity.traceBlock(block_number)
+        traces_rpc = generate_get_block_traces_json_rpc(block_number)
+        response = self.batch_web3_provider.make_batch_request(json.dumps(traces_rpc))
+        result = rpc_response_to_result(response)
 
-        if json_traces is None:
+
+        if result is None:
             raise ValueError('Response from the node is None. Is the node fully synced? Is the node started with tracing enabled? Is trace_block API enabled?')
 
-        traces = [self.trace_mapper.json_dict_to_trace(json_trace) for json_trace in json_traces]
+        traces = [self.trace_mapper.json_dict_to_trace(json_trace) for json_trace in result]
         all_traces.extend(traces)
 
         calculate_trace_statuses(all_traces)
