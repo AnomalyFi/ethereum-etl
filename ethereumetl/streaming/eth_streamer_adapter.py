@@ -8,8 +8,9 @@ from ethereumetl.jobs.export_receipts_job import ExportReceiptsJob
 from ethereumetl.jobs.export_traces_job import ExportTracesJob
 from ethereumetl.jobs.extract_contracts_job import ExtractContractsJob
 from ethereumetl.jobs.extract_token_transfers_job import ExtractTokenTransfersJob
+from ethereumetl.jobs.extract_token_transfers_v2_job import ExtractTokenTransfersV2Job
 from ethereumetl.jobs.extract_tokens_job import ExtractTokensJob
-from ethereumetl.streaming.enrich import enrich_transactions, enrich_logs, enrich_token_transfers, enrich_traces, \
+from ethereumetl.streaming.enrich import enrich_transactions, enrich_logs, enrich_token_transfers, enrich_token_transfers_v2, enrich_traces, \
     enrich_contracts, enrich_tokens
 from ethereumetl.streaming.eth_item_id_calculator import EthItemIdCalculator
 from ethereumetl.streaming.eth_item_timestamp_calculator import EthItemTimestampCalculator
@@ -68,6 +69,10 @@ class EthStreamerAdapter:
         if self._should_export(EntityType.TOKEN_TRANSFER):
             token_transfers = self._extract_token_transfers(logs)
 
+        token_transfers_v2 = []
+        if self._should_export(EntityType.TOKEN_TRANSFER_V2):
+            token_transfers_v2 = self._extract_token_transfers_v2(logs)
+
         # Export traces
         traces = []
         if self._should_export(EntityType.TRACE):
@@ -91,6 +96,8 @@ class EthStreamerAdapter:
             if EntityType.LOG in self.entity_types else []
         enriched_token_transfers = enrich_token_transfers(blocks, token_transfers) \
             if EntityType.TOKEN_TRANSFER in self.entity_types else []
+        enriched_token_transfers_v2 = enrich_token_transfers_v2(blocks, token_transfers_v2) \
+            if EntityType.TOKEN_TRANSFER_V2 in self.entity_types else []
         enriched_traces = enrich_traces(blocks, traces) \
             if EntityType.TRACE in self.entity_types else []
         enriched_contracts = enrich_contracts(blocks, contracts) \
@@ -105,6 +112,7 @@ class EthStreamerAdapter:
             sort_by(enriched_transactions, ('block_number', 'transaction_index')) + \
             sort_by(enriched_logs, ('block_number', 'log_index')) + \
             sort_by(enriched_token_transfers, ('block_number', 'log_index')) + \
+            sort_by(enriched_token_transfers_v2, ('block_number', 'log_index')) + \
             sort_by(enriched_traces, ('block_number', 'trace_index')) + \
             sort_by(enriched_contracts, ('block_number',)) + \
             sort_by(enriched_tokens, ('block_number',))
@@ -157,6 +165,17 @@ class EthStreamerAdapter:
             item_exporter=exporter)
         job.run()
         token_transfers = exporter.get_items('token_transfer')
+        return token_transfers
+
+    def _extract_token_transfers_v2(self, logs):
+        exporter = InMemoryItemExporter(item_types=['token_transfer_v2'])
+        job = ExtractTokenTransfersV2Job(
+            logs_iterable=logs,
+            batch_size=self.batch_size,
+            max_workers=self.max_workers,
+            item_exporter=exporter)
+        job.run()
+        token_transfers = exporter.get_items('token_transfer_v2')
         return token_transfers
 
     def _export_traces(self, start_block, end_block):
