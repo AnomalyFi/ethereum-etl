@@ -233,6 +233,9 @@ class EthStreamerAdapter:
         if entity_type == EntityType.TOKEN_TRANSFER:
             return EntityType.TOKEN_TRANSFER in self.entity_types
 
+        if entity_type == EntityType.TOKEN_TRANSFER_V2:
+            return EntityType.TOKEN_TRANSFER_V2 in self.entity_types
+
         if entity_type == EntityType.TRACE:
             return EntityType.TRACE in self.entity_types or self._should_export(EntityType.CONTRACT)
 
