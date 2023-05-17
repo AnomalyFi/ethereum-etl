@@ -23,6 +23,7 @@
 import json
 import logging
 
+from ethereumetl.utils import hex_to_dec
 
 class EthItemIdCalculator:
 
@@ -41,6 +42,9 @@ class EthItemIdCalculator:
         elif item_type == 'token_transfer' and item.get('transaction_hash') is not None \
                 and item.get('log_index') is not None:
             return concat(item_type, item.get('transaction_hash'), item.get('log_index'))
+        elif item_type == 'token_transfer_v2' and item.get('transaction_hash') is not None \
+                and item.get('log_index') is not None:
+            return concat(item_type, item.get('transaction_hash'), item.get('log_index'), hex_to_dec(item.get('token_id')))
         elif item_type == 'trace' and item.get('trace_id') is not None:
             return concat(item_type, item.get('trace_id'))
         elif item_type == 'contract' and item.get('block_number') is not None and item.get('address') is not None:
